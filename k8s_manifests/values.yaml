@@ -1,0 +1,70 @@
+# values.yaml
+
+# Prometheus server configuration
+server:
+  enabled: true
+  replicaCount: 1
+  resources:
+    requests:
+      memory: 400Mi
+      cpu: 0.2
+    limits:
+      memory: 1000Mi
+      cpu: 1
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  persistentVolume:
+    enabled: true
+    accessModes: ["ReadWriteOnce"]
+    size: 8Gi
+    storageClass: "-"
+  retention: 15d
+  service:
+    type: ClusterIP
+    port: 9090
+
+  # Additional Prometheus configuration files
+  serverFiles:
+    prometheus.yml:
+      global:
+        scrape_interval: 15s
+        evaluation_interval: 15s
+
+      scrape_configs:
+        - job_name: 'prometheus'
+          static_configs:
+            - targets: ['localhost:9090']
+
+        - job_name: 'node-exporter'
+          static_configs:
+            - targets: ['node-exporter:9100']
+
+        - job_name: 'kube-state-metrics'
+          static_configs:
+            - targets: ['kube-state-metrics:8080']
+
+    alerts:
+      groups:
+        - name: ExampleAlert
+          rules:
+            - alert: InstanceDown
+              expr: up == 0
+              for: 5m
+              labels:
+                severity: critical
+              annotations:
+                summary: "Instance down"
+                description: "An instance has been down for more than 5 minutes."
+
+    rules:
+      groups:
+        - name: ExampleRecordingRules
+          rules:
+            - record: job:http_inprogress_requests:sum
+              expr: sum by (job) (http_inprogress_requests)
+
+# Alertmanager configuration
+alertmanager:
+  enabled: true
